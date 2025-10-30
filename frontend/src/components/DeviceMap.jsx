@@ -16,7 +16,7 @@ const fallbackCoordinates = {
   'Gorakhpur District': { lat: 26.7606, lng: 83.3732 },
   'Lucknow': { lat: 26.8467, lng: 80.9462 },
   'Varanasi': { lat: 25.3176, lng: 82.9739 },
-  'Prayagraj': { lat: 25.4480, lng: 81.8462 } 
+  'Prayagraj District': { lat: 25.4480, lng: 81.8462 } 
 };
 
 const extractCoordinates = (device) => {

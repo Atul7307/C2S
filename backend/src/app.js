@@ -33,4 +33,11 @@ app.use('/api', routes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
+
+// home route 
+app.get('/', (req, res) => {
+  res.send('<h1>Welcome to the API Server</h1><p>Use the /api endpoint to access the API routes.</p>');
+});
+
+
 module.exports = app;

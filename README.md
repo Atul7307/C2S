@@ -69,16 +69,14 @@ npm run preview
 
 ### 3. Firmware (ESP8266 & ESP32)
 
-1. Copy `hardware/common/secrets.example.h` to `hardware/common/secrets.h` and update:
-   - `WIFI_SSID` / `WIFI_PASSWORD`
-   - `API_BASE_URL` (e.g. `http://192.168.1.10:3000/api`)
-   - `POLL_INTERVAL_SECONDS` (default `10`)
-2. Open the desired sketch:
-   - ESP8266: `hardware/esp8266/smart_water_esp8266.ino`
-   - ESP32: `hardware/esp32/smart_water_esp32.ino`
-3. Install the required libraries via Arduino Library Manager (search for *DHT sensor library* and *ArduinoJson*).
-4. Adjust pin assignments if your wiring differs (DHT on GPIO4, relay on GPIO5/26 by default).
-5. Flash and monitor the serial output at 115200 baud to confirm readings/posts.
+1. Open the sketch for your target board:
+  - ESP8266: `hardware/esp8266/arduinocode/arduinocode.ino`
+  - ESP32: `hardware/esp32/arduinocode/arduinocode.ino`
+  The sketches declare Wi-Fi credentials, API endpoint, and location labels near the top. Update `WIFI_SSID`, `WIFI_PASSWORD`, `API_BASE_URL` (e.g. `https://c2s-axo4.onrender.com/api`), `LOCATION_LABEL`, and `POLL_INTERVAL_SECONDS` per device. If you prefer hiding secrets in a header, copy `hardware/common/secrets.example.h` to `hardware/common/secrets.h` and include it from the sketch.
+2. Install the required libraries via Arduino Library Manager (search for *DHT sensor library*, *Adafruit Unified Sensor*, and *ArduinoJson*). Ensure you have the latest ESP8266/ESP32 board packages so `HTTPClient` and `WiFiClientSecure` are available.
+3. Adjust pin assignments if your wiring differs (ESP8266 defaults: DHT on D4, relay on D1; ESP32 defaults: DHT on GPIO4, relay on GPIO26, fluoride sensor on GPIO34). Fine-tune fluoride calibration limits in `hardware/common/sensor_utils.h` after testing against reference samples.
+4. Build and flash from the Arduino IDE (board selections: *NodeMCU 1.0 (ESP-12E Module)* or *ESP32 Dev Module*). The ESP32 sketch upgrades to HTTPS when `WiFiClientSecure` exists and currently trusts the remote certificate with `setInsecure()`—replace this with a pinned fingerprint or CA cert before production.
+5. Monitor serial output at 115200 baud to verify Wi-Fi connect logs, sensor posts, and relay sync responses. The firmware prints any non-2xx API responses to aid debugging.
 
 ## 🧠 Backend API Reference
 

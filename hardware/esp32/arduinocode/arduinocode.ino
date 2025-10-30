@@ -4,10 +4,17 @@
 #include <HTTPClient.h>
 #include <WiFi.h>
 
+#if __has_include(<WiFiClientSecure.h>)
+#include <WiFiClientSecure.h>
+#define HAS_WIFI_CLIENT_SECURE 1
+#else
+#define HAS_WIFI_CLIENT_SECURE 0
+#endif
+
 // ------------------ USER SETTINGS ------------------
 const char* WIFI_SSID = "Note";
 const char* WIFI_PASSWORD = "qwertyasd";
-const char* API_BASE_URL = "http://10.166.202.228:3000/api";
+const char* API_BASE_URL = "https://c2s-axo4.onrender.com/api";
 const char* LOCATION_LABEL = "Prayagraj District";
 const uint16_t POLL_INTERVAL_SECONDS = 10;
 // const char* API_BEARER_TOKEN = "YOUR_TOKEN";
@@ -43,7 +50,11 @@ float clampHumidity(float humidity) {
 
 // ------------------ GLOBALS ------------------
 DHT dht(static_cast<uint8_t>(DHT_PIN), DHT_TYPE);
+#if HAS_WIFI_CLIENT_SECURE
+WiFiClientSecure wifiClient;
+#else
 WiFiClient wifiClient;
+#endif
 String deviceId;
 unsigned long lastSync = 0;
 
@@ -81,6 +92,11 @@ void syncRelayState() {
   const String payload = http.getString();
   http.end();
 
+  if (status < 200 || status >= 300) {
+    Serial.printf("[relay] Status %d | response %s\n", status, payload.c_str());
+    return;
+  }
+
   StaticJsonDocument<256> doc;
   if (deserializeJson(doc, payload)) {
     Serial.println(F("[relay] JSON parse error"));
@@ -115,6 +131,7 @@ bool postSensorData(float humidity, float fluoride) {
   serializeJson(doc, body);
 
   const int status = http.POST(body);
+  const String responseBody = http.getString();
   if (status <= 0) {
     Serial.printf("[post] HTTP error: %s\n", http.errorToString(status).c_str());
     http.end();
@@ -122,6 +139,10 @@ bool postSensorData(float humidity, float fluoride) {
   }
 
   Serial.printf("[post] Status %d | payload %s\n", status, body.c_str());
+  if (!responseBody.isEmpty()) {
+    Serial.printf("[post] Response %s\n", responseBody.c_str());
+  }
+
   http.end();
   return status >= 200 && status < 300;
 }
@@ -144,6 +165,11 @@ void connectWiFi() {
   Serial.printf("\nConnected! IP: %s\n", WiFi.localIP().toString().c_str());
   deviceId = WiFi.macAddress();
   Serial.printf("Device ID: %s\n", deviceId.c_str());
+
+  // Accept TLS connections without validating the certificate when the secure client is available.
+#if HAS_WIFI_CLIENT_SECURE
+  wifiClient.setInsecure();
+#endif
 }
 
 // ------------------ ARDUINO LIFECYCLE ------------------

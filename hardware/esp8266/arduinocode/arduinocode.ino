@@ -1,36 +1,42 @@
 #include <Arduino.h>
+// ESP8266 uses ESP8266WiFi.h, not just WiFi.h
+#include <ESP8266WiFi.h>
+// Use this specific library for HTTPS on ESP8266
+#include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
 #include <DHT.h>
-#include <ESP8266HTTPClient.h>
-#include <ESP8266WiFi.h>
+// Note: ESP8266's analogRead is 10-bit (0-1023) by default.
 
 // ------------------ USER SETTINGS ------------------
 const char* WIFI_SSID = "Note";
 const char* WIFI_PASSWORD = "qwertyasd";
-const char* API_BASE_URL = "http://10.166.202.228:3000/api";  // include /api suffix
-const char* LOCATION_LABEL = "Gorakhpur District";
+const char* API_BASE_URL = "https://c2s-axo4.onrender.com/api";
+const char* LOCATION_LABEL = "Prayagraj District";
 const uint16_t POLL_INTERVAL_SECONDS = 10;
-// const char* API_BEARER_TOKEN = "YOUR_TOKEN";  // uncomment if backend uses auth
+// const char* API_BEARER_TOKEN = "YOUR_TOKEN";
 
 // ------------------ HARDWARE PINS ------------------
-constexpr uint8_t DHT_PIN = D4;       // GPIO2 on NodeMCU
-constexpr uint8_t RELAY_PIN = D1;     // GPIO5
-constexpr uint8_t FLUORIDE_PIN = A0;  // 0-1V range
-constexpr auto DHT_TYPE = DHT11;      // change to DHT11 if needed
+// Use D-pins for ESP8266 or GPIO numbers
+constexpr uint8_t DHT_PIN = D2;        // Equivalent to GPIO4 (common)
+constexpr uint8_t RELAY_PIN = D1;      // Equivalent to GPIO5 (common)
+constexpr uint8_t FLUORIDE_PIN = A0;   // ESP8266 only has ONE analog pin, A0 (ADC0)
+constexpr auto DHT_TYPE = DHT11;
 constexpr bool RELAY_ACTIVE_HIGH = true;
 
 // ------------------ CALIBRATION ------------------
 struct FluorideCalibration {
   float minPpm = 0.0f;
   float maxPpm = 2.5f;
-  uint16_t maxAdc = 1023;  // ESP8266 ADC resolution
+  // ESP8266 ADC resolution is 10-bit (0-1023) by default
+  uint16_t maxAdc = 1023; 
 };
 
 FluorideCalibration fluorideCalibration;
 
 float convertAnalogToFluoride(uint16_t raw) {
   raw = constrain(raw, static_cast<uint16_t>(0), fluorideCalibration.maxAdc);
-  const float proportion = static_cast<float>(raw) / fluorideCalibration.maxAdc;
+  // ADC range for ESP8266 is typically 0-1023
+  const float proportion = static_cast<float>(raw) / 1023.0f; 
   return fluorideCalibration.minPpm + proportion * (fluorideCalibration.maxPpm - fluorideCalibration.minPpm);
 }
 
@@ -43,12 +49,14 @@ float clampHumidity(float humidity) {
 
 // ------------------ GLOBALS ------------------
 DHT dht(DHT_PIN, DHT_TYPE);
-WiFiClient wifiClient;
+// Use WiFiClientSecure for HTTPS on ESP8266
+WiFiClientSecure wifiClient;
 String deviceId;
 unsigned long lastSync = 0;
 
 // ------------------ HELPERS ------------------
 float readFluorideMgL() {
+  // Use A0 for analogRead on ESP8266
   const uint16_t raw = analogRead(FLUORIDE_PIN);
   return convertAnalogToFluoride(raw);
 }
@@ -62,6 +70,8 @@ void applyRelayState(const String& state) {
 void syncRelayState() {
   HTTPClient http;
   const String url = String(API_BASE_URL) + "/devices/led/" + deviceId;
+  
+  // Begin must be passed the WiFiClientSecure object for HTTPS
   if (!http.begin(wifiClient, url)) {
     Serial.println(F("[relay] HTTP begin failed"));
     return;
@@ -72,14 +82,21 @@ void syncRelayState() {
 #endif
 
   const int status = http.GET();
+  
+  // Ensure http.end() is called before return
   if (status <= 0) {
     Serial.printf("[relay] HTTP error: %s\n", http.errorToString(status).c_str());
     http.end();
     return;
   }
-
+  
   const String payload = http.getString();
   http.end();
+
+  if (status < 200 || status >= 300) {
+    Serial.printf("[relay] Status %d | response %s\n", status, payload.c_str());
+    return;
+  }
 
   StaticJsonDocument<256> doc;
   if (deserializeJson(doc, payload)) {
@@ -95,6 +112,8 @@ void syncRelayState() {
 bool postSensorData(float humidity, float fluoride) {
   HTTPClient http;
   const String url = String(API_BASE_URL) + "/data";
+  
+  // Begin must be passed the WiFiClientSecure object for HTTPS
   if (!http.begin(wifiClient, url)) {
     Serial.println(F("[post] HTTP begin failed"));
     return false;
@@ -115,6 +134,9 @@ bool postSensorData(float humidity, float fluoride) {
   serializeJson(doc, body);
 
   const int status = http.POST(body);
+  const String responseBody = http.getString();
+  
+  // Ensure http.end() is called before return
   if (status <= 0) {
     Serial.printf("[post] HTTP error: %s\n", http.errorToString(status).c_str());
     http.end();
@@ -122,6 +144,10 @@ bool postSensorData(float humidity, float fluoride) {
   }
 
   Serial.printf("[post] Status %d | payload %s\n", status, body.c_str());
+  if (!responseBody.isEmpty()) {
+    Serial.printf("[post] Response %s\n", responseBody.c_str());
+  }
+
   http.end();
   return status >= 200 && status < 300;
 }
@@ -144,6 +170,9 @@ void connectWiFi() {
   Serial.printf("\nConnected! IP: %s\n", WiFi.localIP().toString().c_str());
   deviceId = WiFi.macAddress();
   Serial.printf("Device ID: %s\n", deviceId.c_str());
+
+  // Allow for self-signed or unverified certificates (required for Render's default cert setup)
+  wifiClient.setInsecure(); 
 }
 
 // ------------------ ARDUINO LIFECYCLE ------------------
@@ -153,9 +182,11 @@ void setup() {
   Serial.println();
   Serial.println(F("Smart Water Monitor (ESP8266)"));
 
+  // Set the pin modes using the ESP8266-specific D-pin definitions
   pinMode(RELAY_PIN, OUTPUT);
   applyRelayState("off");
 
+  // analogReadResolution is not available/necessary on ESP8266
   dht.begin();
   connectWiFi();
 }
@@ -166,6 +197,7 @@ void loop() {
     connectWiFi();
   }
 
+  // Reading sensors and posting data... (same logic)
   const float humidity = clampHumidity(dht.readHumidity());
   const float fluoride = readFluorideMgL();
 
