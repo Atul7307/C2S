@@ -24,7 +24,7 @@ const Alerts = () => {
           key={`${alert.device_id}-${alert.timestamp}-${alert.message}`}
           className={`rounded-lg px-4 py-3 text-sm shadow-inner ${badgeColors[alert.level]}`}
         >
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
             <div>
               <p className="font-semibold text-slate-100">Device {alert.device_id}</p>
               <p className="text-slate-200">{alert.message}</p>

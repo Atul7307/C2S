@@ -35,7 +35,7 @@ const extractCoordinates = (device) => {
   return null;
 };
 
-const DeviceMap = () => {
+const DeviceMap = ({ className = '' }) => {
   const devices = useDeviceStore((state) => state.devices);
 
   const markers = useMemo(
@@ -55,7 +55,7 @@ const DeviceMap = () => {
 
   if (markers.length === 0) {
     return (
-      <div className="rounded-lg bg-slate-800 p-4 text-sm text-slate-300 shadow-md">
+      <div className={`rounded-lg bg-slate-800 p-4 text-sm text-slate-300 shadow-md ${className}`}>
         Provide coordinates in device metadata to unlock the map view.
       </div>
     );
@@ -64,7 +64,7 @@ const DeviceMap = () => {
   const center = markers[0].coords;
 
   return (
-    <div className="h-[320px] overflow-hidden rounded-lg shadow-md">
+    <div className={`h-[320px] overflow-hidden rounded-lg shadow-md ${className}`}>
       <MapContainer center={center} zoom={6} className="h-full w-full" scrollWheelZoom>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

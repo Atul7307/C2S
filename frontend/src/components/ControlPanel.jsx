@@ -25,12 +25,12 @@ const ControlPanel = () => {
 
   return (
     <div className="rounded-lg bg-slate-800 p-4 shadow-md">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h3 className="text-base font-semibold text-slate-100">Control Panel</h3>
         <select
           value={selectedDeviceId || ''}
           onChange={(event) => setSelectedDevice(event.target.value)}
-          className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-primary focus:outline-none"
+          className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-primary focus:outline-none sm:w-auto"
         >
           <option value="" disabled>
             Select device

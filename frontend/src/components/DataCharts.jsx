@@ -13,7 +13,7 @@ import useDeviceStore from '../store/deviceStore';
 
 const formatTimestamp = (value) => new Date(value).toLocaleTimeString();
 
-const DataCharts = () => {
+const DataCharts = ({ className = '' }) => {
   const selectedDeviceId = useDeviceStore((state) => state.selectedDeviceId);
   const readings = useDeviceStore((state) =>
     state.readings.filter((reading) => reading.device_id === state.selectedDeviceId),
@@ -33,7 +33,7 @@ const DataCharts = () => {
 
   if (!selectedDeviceId) {
     return (
-      <div className="rounded-lg bg-slate-800 p-6 text-center text-slate-300 shadow-md">
+      <div className={`rounded-lg bg-slate-800 p-6 text-center text-slate-300 shadow-md ${className}`}>
         Select a device to view detailed trends.
       </div>
     );
@@ -41,14 +41,14 @@ const DataCharts = () => {
 
   if (chartData.length === 0) {
     return (
-      <div className="rounded-lg bg-slate-800 p-6 text-center text-slate-300 shadow-md">
+      <div className={`rounded-lg bg-slate-800 p-6 text-center text-slate-300 shadow-md ${className}`}>
         No readings available yet for {selectedDeviceId}.
       </div>
     );
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-2">
+    <div className={`grid gap-6 md:grid-cols-2 ${className}`}>
       <div className="rounded-lg bg-slate-800 p-4 shadow-md">
         <h3 className="mb-2 text-sm font-semibold text-slate-300">Humidity</h3>
         <ResponsiveContainer width="100%" height={240}>
